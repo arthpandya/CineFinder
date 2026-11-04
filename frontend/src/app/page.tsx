@@ -506,6 +506,9 @@ async function generateCustomRecommendations() {
           <a className="nav-link nav-active" href="#discover" onClick={() => setMobileMenuOpen(false)}>Discover</a>
           <a className="nav-link" href="#recommendations" onClick={() => setMobileMenuOpen(false)}>For you</a>
           <a className="nav-link" href="#genres" onClick={() => setMobileMenuOpen(false)}>Genres</a>
+          <a className="nav-link" href="/friends" onClick={() => setMobileMenuOpen(false)}>
+  Friends
+</a>
         </nav>
 
         <div className="topbar-actions">
