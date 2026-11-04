@@ -1,0 +1,6 @@
+CineFinder - Item-Based Collaborative Filtering
+Method: Item-Based Collaborative Filtering (cosine similarity)
+Training ratings: 411449
+Test ratings evaluated: 5000
+RMSE: 0.9949
+MAE: 0.7575

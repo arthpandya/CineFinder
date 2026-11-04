@@ -1,0 +1,6 @@
+CineFinder - User-Based Collaborative Filtering
+Method: User-Based Collaborative Filtering (cosine similarity)
+Training ratings: 411449
+Test ratings evaluated: 5000
+RMSE: 1.0037
+MAE: 0.7638

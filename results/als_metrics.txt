@@ -1,0 +1,9 @@
+CineFinder - ALS Matrix Factorization
+Method: Explicit-feedback ALS Matrix Factorization
+Training ratings: 411449
+Factors: 20
+Iterations: 10
+Regularization: 0.1
+Test ratings evaluated: 5000
+RMSE: 1.4133
+MAE: 1.1058
