@@ -261,7 +261,7 @@ def movie_to_dict(row):
 
     title = str(movie.get("title") or "")
 
-    year_match = re.search(r"**\(**(\d{4})**\)**\s*$", title)
+    year_match = re.search(r"\((\d{4})\)\s*$", title)
 
     movie["year"] = int(year_match.group(1)) if year_match else None
 
