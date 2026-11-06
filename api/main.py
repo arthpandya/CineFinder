@@ -2,11 +2,9 @@
 
 CineFinder FastAPI backend.
 
-
 Run from the CineFinder project root:
 
     uvicorn api.main:app --reload
-
 
 Expected files:
 
@@ -20,7 +18,6 @@ Expected files:
 
 """
 
-
 from contextlib import asynccontextmanager
 
 from pathlib import Path
@@ -28,11 +25,14 @@ from pathlib import Path
 from typing import Optional
 
 import re
-import json
-import os
-import urllib.request
-import urllib.error
 
+import json
+
+import os
+
+import urllib.request
+
+import urllib.error
 
 import joblib
 
@@ -45,13 +45,12 @@ from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
 
+from fastapi.responses import RedirectResponse
 
 from api.auth import router as auth_router, init_auth_db
 
 from api.friends import router as friends_router
-
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
@@ -69,15 +68,19 @@ USER_MODEL_FILE = MODELS_DIR / "user_based_model.joblib"
 
 ALS_MODEL_FILE = MODELS_DIR / "als_model.joblib"
 
-
 LINKS_FILE = (
-    ROOT_DIR / "links.csv"
-    if (ROOT_DIR / "links.csv").exists()
-    else PROCESSED_DIR / "links.csv"
-)
-TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500"
-POSTER_CACHE = {}
 
+    ROOT_DIR / "links.csv"
+
+    if (ROOT_DIR / "links.csv").exists()
+
+    else PROCESSED_DIR / "links.csv"
+
+)
+
+TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500"
+
+POSTER_CACHE = {}
 
 def load_resources():
 
@@ -87,22 +90,29 @@ def load_resources():
 
         raise RuntimeError(f"Movie metadata file not found: {MOVIES_FILE}")
 
-
     movies = pd.read_csv(MOVIES_FILE)
 
     movies["movieId"] = movies["movieId"].astype(int)
 
     # Load the MovieLens movieId -> TMDB movie ID mapping.
-    if LINKS_FILE.exists():
-        links = pd.read_csv(LINKS_FILE)
-        links["movieId"] = links["movieId"].astype(int)
-        links = links.dropna(subset=["tmdbId"]).copy()
-        links["tmdbId"] = links["tmdbId"].astype(int)
-        tmdb_mapping = dict(zip(links["movieId"], links["tmdbId"]))
-    else:
-        print(f"WARNING: links.csv not found: {LINKS_FILE}")
-        tmdb_mapping = {}
 
+    if LINKS_FILE.exists():
+
+        links = pd.read_csv(LINKS_FILE)
+
+        links["movieId"] = links["movieId"].astype(int)
+
+        links = links.dropna(subset=["tmdbId"]).copy()
+
+        links["tmdbId"] = links["tmdbId"].astype(int)
+
+        tmdb_mapping = dict(zip(links["movieId"], links["tmdbId"]))
+
+    else:
+
+        print(f"WARNING: links.csv not found: {LINKS_FILE}")
+
+        tmdb_mapping = {}
 
     train_file = PROCESSED_DIR / "train.csv"
 
@@ -112,16 +122,21 @@ def load_resources():
 
     train = pd.read_csv(train_file)
 
-
     resources = {
-        "movies": movies,
-        "train": train,
-        "item": None,
-        "user": None,
-        "als": None,
-        "tmdb_mapping": tmdb_mapping,
-    }
 
+        "movies": movies,
+
+        "train": train,
+
+        "item": None,
+
+        "user": None,
+
+        "als": None,
+
+        "tmdb_mapping": tmdb_mapping,
+
+    }
 
     for key, model_path in (
 
@@ -141,9 +156,7 @@ def load_resources():
 
             print(f"WARNING: Model not found, {key} recommendations unavailable: {model_path}")
 
-
     return resources
-
 
 @asynccontextmanager
 
@@ -157,20 +170,17 @@ async def lifespan(app: FastAPI):
 
     app.state.resources = None
 
-
 class UserRating(BaseModel):
 
     movieId: int
 
     rating: float = Field(ge=0.5, le=5.0)
 
-
 class CustomRecommendationRequest(BaseModel):
 
     ratings: list[UserRating]
 
     algorithm: str = "item"
-
 
 app = FastAPI(
 
@@ -184,13 +194,11 @@ app = FastAPI(
 
 )
 
-
 init_auth_db()
 
 app.include_router(auth_router)
 
 app.include_router(friends_router)
-
 
 # For local Next.js development. Update/add your deployed Vercel domain later.
 
@@ -216,7 +224,6 @@ app.add_middleware(
 
 )
 
-
 def get_resources():
 
     resources = getattr(app.state, "resources", None)
@@ -226,7 +233,6 @@ def get_resources():
         raise HTTPException(status_code=503, detail="Recommendation resources are not loaded.")
 
     return resources
-
 
 def get_model(resources, model_name: str):
 
@@ -243,7 +249,6 @@ def get_model(resources, model_name: str):
         )
 
     return model
-
 
 def movie_to_dict(row):
 
@@ -271,7 +276,6 @@ def movie_to_dict(row):
 
     return movie
 
-
 def find_movie(movies: pd.DataFrame, movie_id: int):
 
     matched = movies.loc[movies["movieId"] == int(movie_id)]
@@ -282,11 +286,9 @@ def find_movie(movies: pd.DataFrame, movie_id: int):
 
     return movie_to_dict(matched.iloc[0])
 
-
 def recommend_item_based(model, movies, user_id: int, top_n: int):
 
     history = model["user_history"].get(int(user_id))
-
 
     if history is None or len(history) == 0:
 
@@ -298,7 +300,6 @@ def recommend_item_based(model, movies, user_id: int, top_n: int):
 
         )
 
-
     rated_items = {
 
         int(movie_id): float(rating)
@@ -307,33 +308,27 @@ def recommend_item_based(model, movies, user_id: int, top_n: int):
 
     }
 
-
     user_mean = model["user_means"].get(
 
         int(user_id), model["global_mean"]
 
     )
 
-
     score_totals = {}
 
     similarity_totals = {}
-
 
     for rated_movie_id, user_rating in rated_items.items():
 
         source_index = model["movie_to_index"].get(rated_movie_id)
 
-
         if source_index is None:
 
             continue
 
-
         neighbor_indices = model["neighbor_indices"][source_index]
 
         similarities = model["neighbor_similarities"][source_index]
-
 
         for neighbor_index, similarity in zip(neighbor_indices, similarities):
 
@@ -341,14 +336,11 @@ def recommend_item_based(model, movies, user_id: int, top_n: int):
 
                 continue
 
-
             candidate_id = int(model["movie_ids"][neighbor_index])
-
 
             if candidate_id in rated_items:
 
                 continue
-
 
             score_totals[candidate_id] = (
 
@@ -358,7 +350,6 @@ def recommend_item_based(model, movies, user_id: int, top_n: int):
 
             )
 
-
             similarity_totals[candidate_id] = (
 
                 similarity_totals.get(candidate_id, 0.0)
@@ -367,9 +358,7 @@ def recommend_item_based(model, movies, user_id: int, top_n: int):
 
             )
 
-
     scored = []
-
 
     for movie_id, total in score_totals.items():
 
@@ -383,14 +372,11 @@ def recommend_item_based(model, movies, user_id: int, top_n: int):
 
             scored.append((movie_id, float(np.clip(score, 0.5, 5.0))))
 
-
     scored.sort(key=lambda pair: pair[1], reverse=True)
-
 
     result = []
 
     movie_lookup = movies.set_index("movieId", drop=False)
-
 
     for movie_id, score in scored[:top_n]:
 
@@ -402,9 +388,7 @@ def recommend_item_based(model, movies, user_id: int, top_n: int):
 
             result.append(item)
 
-
     return result
-
 
 def recommend_for_custom_user(model, movies, ratings, top_n=10):
 
@@ -416,7 +400,6 @@ def recommend_for_custom_user(model, movies, ratings, top_n=10):
 
     }
 
-
     if not rated_items:
 
         raise HTTPException(
@@ -427,28 +410,23 @@ def recommend_for_custom_user(model, movies, ratings, top_n=10):
 
         )
 
-
     baseline = 3.5
 
     score_totals = {}
 
     similarity_totals = {}
 
-
     for rated_movie_id, user_rating in rated_items.items():
 
         source_index = model["movie_to_index"].get(rated_movie_id)
-
 
         if source_index is None:
 
             continue
 
-
         neighbors = model["neighbor_indices"][source_index]
 
         similarities = model["neighbor_similarities"][source_index]
-
 
         for neighbor_index, similarity in zip(neighbors, similarities):
 
@@ -456,14 +434,11 @@ def recommend_for_custom_user(model, movies, ratings, top_n=10):
 
                 continue
 
-
             candidate_id = int(model["movie_ids"][neighbor_index])
-
 
             if candidate_id in rated_items:
 
                 continue
-
 
             score_totals[candidate_id] = (
 
@@ -473,7 +448,6 @@ def recommend_for_custom_user(model, movies, ratings, top_n=10):
 
             )
 
-
             similarity_totals[candidate_id] = (
 
                 similarity_totals.get(candidate_id, 0.0)
@@ -482,19 +456,15 @@ def recommend_for_custom_user(model, movies, ratings, top_n=10):
 
             )
 
-
     scored = []
-
 
     for movie_id, total in score_totals.items():
 
         similarity_sum = similarity_totals[movie_id]
 
-
         if similarity_sum > 0:
 
             score = baseline + (total / similarity_sum) * 0.5
-
 
             scored.append((
 
@@ -504,14 +474,11 @@ def recommend_for_custom_user(model, movies, ratings, top_n=10):
 
             ))
 
-
     scored.sort(key=lambda x: x[1], reverse=True)
-
 
     movie_lookup = movies.set_index("movieId", drop=False)
 
     results = []
-
 
     for movie_id, score in scored:
 
@@ -523,14 +490,11 @@ def recommend_for_custom_user(model, movies, ratings, top_n=10):
 
             results.append(item)
 
-
             if len(results) >= top_n:
 
                 break
 
-
     return results
-
 
 def recommend_user_based(model, movies, user_id: int, top_n: int):
 
@@ -540,18 +504,15 @@ def recommend_user_based(model, movies, user_id: int, top_n: int):
 
         raise HTTPException(status_code=404, detail="User not found in the training data.")
 
-
     user_mean = model["user_means"].get(int(user_id), model["global_mean"])
 
     user_row = model["user_movie_matrix"].getrow(user_index)
 
     already_rated = set(model["movie_ids"][user_row.indices].astype(int))
 
-
     score_totals = {}
 
     similarity_totals = {}
-
 
     for neighbor_index, similarity in zip(
 
@@ -565,13 +526,11 @@ def recommend_user_based(model, movies, user_id: int, top_n: int):
 
             continue
 
-
         neighbor_id = int(model["user_ids"][neighbor_index])
 
         neighbor_mean = model["user_means"].get(neighbor_id, model["global_mean"])
 
         neighbor_row = model["user_movie_matrix"].getrow(neighbor_index)
-
 
         for movie_index, rating in zip(neighbor_row.indices, neighbor_row.data):
 
@@ -580,7 +539,6 @@ def recommend_user_based(model, movies, user_id: int, top_n: int):
             if movie_id in already_rated:
 
                 continue
-
 
             score_totals[movie_id] = (
 
@@ -596,7 +554,6 @@ def recommend_user_based(model, movies, user_id: int, top_n: int):
 
             )
 
-
     scored = []
 
     for movie_id, total in score_totals.items():
@@ -608,7 +565,6 @@ def recommend_user_based(model, movies, user_id: int, top_n: int):
             scored.append((movie_id, float(np.clip(score, 0.5, 5.0))))
 
     scored.sort(key=lambda pair: pair[1], reverse=True)
-
 
     result = []
 
@@ -626,7 +582,6 @@ def recommend_user_based(model, movies, user_id: int, top_n: int):
 
     return result
 
-
 def recommend_als(model, train, movies, user_id: int, top_n: int):
 
     user_index = model["user_to_index"].get(int(user_id))
@@ -634,7 +589,6 @@ def recommend_als(model, train, movies, user_id: int, top_n: int):
     if user_index is None:
 
         raise HTTPException(status_code=404, detail="User not found in the training data.")
-
 
     rated_ids = set(
 
@@ -649,7 +603,6 @@ def recommend_als(model, train, movies, user_id: int, top_n: int):
     )
 
     candidate_indices = np.argsort(scores)[::-1]
-
 
     result = []
 
@@ -679,7 +632,6 @@ def recommend_als(model, train, movies, user_id: int, top_n: int):
 
     return result
 
-
 @app.get("/")
 
 def root():
@@ -695,7 +647,6 @@ def root():
         "health": "/health",
 
     }
-
 
 @app.get("/health")
 
@@ -721,13 +672,11 @@ def health():
 
     }
 
-
 @app.get("/model-metrics")
 
 def model_metrics():
 
     results_dir = RESULTS_DIR
-
 
     metric_files = {
 
@@ -739,14 +688,11 @@ def model_metrics():
 
 }
 
-
     results = {}
-
 
     for model_name, filename in metric_files.items():
 
         file_path = results_dir / filename
-
 
         if not file_path.exists():
 
@@ -758,9 +704,7 @@ def model_metrics():
 
             )
 
-
         metrics = {}
-
 
         with open(file_path, "r", encoding="utf-8") as file:
 
@@ -769,7 +713,6 @@ def model_metrics():
                 if ":" in line:
 
                     key, value = line.strip().split(":", 1)
-
 
                     if key in ("RMSE", "MAE"):
 
@@ -783,9 +726,7 @@ def model_metrics():
 
                         metrics["training_ratings"] = int(value.strip())
 
-
         results[model_name] = metrics
-
 
     best_model = min(
 
@@ -795,7 +736,6 @@ def model_metrics():
 
     )
 
-
     return {
 
         "models": results,
@@ -803,7 +743,6 @@ def model_metrics():
         "best_model": best_model
 
     }
-
 
 @app.get("/movies")
 
@@ -815,12 +754,28 @@ def list_movies(
 
     genre: Optional[str] = None,
 
+    year_from: Optional[int] = Query(None, ge=1888, le=2035),
+
+    year_to: Optional[int] = Query(None, ge=1888, le=2035),
+
 ):
 
     movies = get_resources()["movies"]
 
-    filtered = movies
+    filtered = movies.copy()
 
+    # Extract release year from MovieLens titles, e.g. "Toy Story (1995)".
+    years = filtered["title"].astype(str).str.extract(r"\((\d{4})\)\s*$", expand=False)
+    filtered["_year"] = pd.to_numeric(years, errors="coerce")
+
+    if year_from is not None:
+        filtered = filtered[filtered["_year"].notna() & (filtered["_year"] >= year_from)]
+
+    if year_to is not None:
+        filtered = filtered[filtered["_year"].notna() & (filtered["_year"] <= year_to)]
+
+    if year_from is not None and year_to is not None and year_from > year_to:
+        raise HTTPException(status_code=400, detail="Year From cannot be greater than Year To.")
 
     if genre:
 
@@ -834,13 +789,11 @@ def list_movies(
 
         ]
 
-
     total = len(filtered)
 
     start = (page - 1) * limit
 
     page_rows = filtered.iloc[start:start + limit]
-
 
     return {
 
@@ -850,10 +803,9 @@ def list_movies(
 
         "total": total,
 
-        "results": [movie_to_dict(row) for _, row in page_rows.iterrows()],
+        "results": [movie_to_dict(row.drop(labels=["_year"], errors="ignore")) for _, row in page_rows.iterrows()],
 
     }
-
 
 @app.get("/search")
 
@@ -873,7 +825,6 @@ def search_movies(
 
     return {"query": q, "results": [movie_to_dict(row) for _, row in matched.iterrows()]}
 
-
 @app.get("/movies/{movie_id}")
 
 def movie_details(movie_id: int):
@@ -881,7 +832,6 @@ def movie_details(movie_id: int):
     resources = get_resources()
 
     movie = find_movie(resources["movies"], movie_id)
-
 
     item_model = resources.get("item")
 
@@ -911,9 +861,7 @@ def movie_details(movie_id: int):
 
                     similar.append(entry)
 
-
     return {"movie": movie, "similar_movies": similar}
-
 
 @app.get("/similar/{movie_id}")
 
@@ -933,18 +881,15 @@ def similar_movies(
 
     movie_index = model["movie_to_index"].get(int(movie_id))
 
-
     if movie_index is None:
 
         return {"movie": movie, "results": []}
-
 
     movie_lookup = resources["movies"].set_index("movieId", drop=False)
 
     indices = model["neighbor_indices"][movie_index][:limit]
 
     similarities = model["neighbor_similarities"][movie_index][:limit]
-
 
     results = []
 
@@ -960,9 +905,7 @@ def similar_movies(
 
             results.append(entry)
 
-
     return {"movie": movie, "results": results}
-
 
 @app.get("/recommendations/{user_id}")
 
@@ -982,7 +925,6 @@ def recommendations(
 
     movies = resources["movies"]
 
-
     if model == "item":
 
         results = recommend_item_based(selected_model, movies, user_id, limit)
@@ -995,7 +937,6 @@ def recommendations(
 
         results = recommend_als(selected_model, resources["train"], movies, user_id, limit)
 
-
     return {
 
         "user_id": user_id,
@@ -1007,7 +948,6 @@ def recommendations(
         "results": results,
 
     }
-
 
 # Custom recommendations endpoint
 
@@ -1025,7 +965,6 @@ def custom_recommendations(
 
     model = get_model(resources, "item")
 
-
     results = recommend_for_custom_user(
 
         model,
@@ -1038,7 +977,6 @@ def custom_recommendations(
 
     )
 
-
     return {
 
         "algorithm": "item-based",
@@ -1049,52 +987,82 @@ def custom_recommendations(
 
     }
 
-
 @app.get("/posters/{movie_id}")
+
 def get_movie_poster(movie_id: int):
+
     """Redirect to a TMDB poster image without exposing the TMDB token."""
+
     resources = get_resources()
+
     tmdb_id = resources["tmdb_mapping"].get(int(movie_id))
 
     if tmdb_id is None:
+
         raise HTTPException(status_code=404, detail="TMDB ID not available for this movie.")
 
     cached_path = POSTER_CACHE.get(int(tmdb_id))
+
     if cached_path:
+
         return RedirectResponse(url=TMDB_IMAGE_BASE + cached_path)
 
     token = os.getenv("TMDB_API_READ_ACCESS_TOKEN")
+
     if not token:
+
         raise HTTPException(
+
             status_code=503,
+
             detail="TMDB access token is not configured on the backend.",
+
         )
 
     tmdb_url = f"https://api.themoviedb.org/3/movie/{int(tmdb_id)}"
+
     request = urllib.request.Request(
+
         tmdb_url,
+
         headers={
+
             "Authorization": f"Bearer {token}",
+
             "accept": "application/json",
+
         },
+
     )
 
     try:
+
         with urllib.request.urlopen(request, timeout=12) as response:
+
             data = json.loads(response.read().decode("utf-8"))
 
         poster_path = data.get("poster_path")
+
         if not poster_path:
+
             raise HTTPException(status_code=404, detail="TMDB has no poster for this movie.")
 
         POSTER_CACHE[int(tmdb_id)] = poster_path
+
         return RedirectResponse(url=TMDB_IMAGE_BASE + poster_path)
 
     except urllib.error.HTTPError as error:
+
         print(f"TMDB API returned HTTP {error.code} for TMDB movie {tmdb_id}.")
+
         raise HTTPException(status_code=502, detail="TMDB could not provide this movie poster.")
+
     except urllib.error.URLError as error:
+
         print(f"Could not connect to TMDB: {error}")
+
         raise HTTPException(status_code=502, detail="Could not connect to TMDB.")
+
     except TimeoutError:
+
         raise HTTPException(status_code=504, detail="TMDB poster request timed out.")
